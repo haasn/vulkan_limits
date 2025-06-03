@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <libplacebo/vulkan.h>
 #include <vulkan/vulkan.h>
 
 static const char *to_str(VkResult res)
@@ -130,34 +129,6 @@ static int test_both(void)
     }
 }
 
-static int test_pl_vulkan(void)
-{
-    pl_log log = pl_log_create(PL_API_VER, pl_log_params(
-        .log_level = PL_LOG_WARN,
-        .log_cb    = pl_log_color,
-    ));
-
-    pl_vk_inst inst = pl_vk_inst_create(log, pl_vk_inst_params(
-        .debug = false,
-    ));
-
-    printf("Trying to exhaust pl_vulkan creation limit...\n");
-    for (int i = 0;;) {
-        pl_vulkan vulkan = pl_vulkan_create(log, pl_vulkan_params(
-            .instance = inst->instance,
-        ));
-
-        if (!vulkan) {
-            printf("Failed after %d instances\n", i);
-            pl_log_destroy(&log);
-            return 1;
-        } else {
-            printf("  %d\n", ++i);
-        }
-    }
-}
-
-
 int main(const int argc, const char *const argv[])
 {
     if (argc < 2) {
@@ -172,8 +143,6 @@ int main(const int argc, const char *const argv[])
         return test_device();
     } else if (!strcmp(test, "both")) {
         return test_both();
-    } else if (!strcmp(test, "pl_vulkan")) {
-        return test_pl_vulkan();
     } else {
         fprintf(stderr, "Unknown test: %s\n", test);
         return 1;
