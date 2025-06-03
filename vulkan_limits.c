@@ -37,7 +37,7 @@ static VkInstance create_instance(void)
         .pApplicationName = "Vulkan Limits Test",
         .applicationVersion = 1,
         .engineVersion = 1,
-        .apiVersion = VK_API_VERSION_1_4,
+        .apiVersion = VK_API_VERSION_1_0,
     };
 
     static const VkInstanceCreateInfo create_info = {
