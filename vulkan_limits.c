@@ -138,8 +138,7 @@ static int device_thread(void *arg)
     create_device(get_phys_device(create_instance()));
     printf("  %d\n", atomic_fetch_add(num, 1) + 1);
 
-    pause();
-    return 0;
+    return pause();
 }
 
 static int test_threads(void)
@@ -155,6 +154,13 @@ static int test_threads(void)
         thrd_detach(thread);
     }
 };
+
+static int test_hold(void)
+{
+    create_device(get_phys_device(create_instance()));
+    printf("Holding device...\n");
+    return pause();
+}
 
 int main(const int argc, const char *const argv[])
 {
@@ -172,6 +178,8 @@ int main(const int argc, const char *const argv[])
         return test_both();
     } else if (!strcmp(test, "threads")) {
         return test_threads();
+    } else if (!strcmp(test, "hold")) {
+        return test_hold();
     } else {
         fprintf(stderr, "Unknown test: %s\n", test);
         return 1;
