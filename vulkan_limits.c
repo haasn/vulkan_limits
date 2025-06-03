@@ -90,13 +90,13 @@ static int test_device(void)
 
     VkDeviceCreateInfo device_create_info = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+        .queueCreateInfoCount = 1,
         .pQueueCreateInfos = &(VkDeviceQueueCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
             .queueFamilyIndex = 0,
-            .queueCount = 1,
+            .queueCount = 16,
             .pQueuePriorities = (float[]){1.0f},
         },
-        .enabledExtensionCount = 0,
     };
 
     printf("Trying to exhaust device creation limit...\n");
