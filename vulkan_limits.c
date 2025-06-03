@@ -132,7 +132,7 @@ static int test_both(void)
 int main(const int argc, const char *const argv[])
 {
     if (argc < 2) {
-        fprintf(stderr, "Usage: %s <instance>\n", argv[0]);
+        fprintf(stderr, "Usage: %s <instance|device|combined>\n", argv[0]);
         return 1;
     }
 
@@ -141,7 +141,7 @@ int main(const int argc, const char *const argv[])
         return test_instance();
     } else if (!strcmp(test, "device")) {
         return test_device();
-    } else if (!strcmp(test, "both")) {
+    } else if (!strcmp(test, "combined")) {
         return test_both();
     } else {
         fprintf(stderr, "Unknown test: %s\n", test);
