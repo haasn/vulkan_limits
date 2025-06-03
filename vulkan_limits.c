@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <libplacebo/vulkan.h>
@@ -30,141 +31,102 @@ static const char *to_str(VkResult res)
     }
 }
 
-static int test_instance(void)
+static VkInstance create_instance(void)
 {
-    VkInstanceCreateInfo create_info = {
-        .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-        .pApplicationInfo = &(VkApplicationInfo) {
-            .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-            .pApplicationName = "Vulkan Limits Test",
-            .applicationVersion = 1,
-            .engineVersion = 1,
-            .apiVersion = VK_API_VERSION_1_0,
-        },
+    static const VkApplicationInfo ainfo = {
+        .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+        .pApplicationName = "Vulkan Limits Test",
+        .applicationVersion = 1,
+        .engineVersion = 1,
+        .apiVersion = VK_API_VERSION_1_4,
     };
 
-    printf("Trying to exhaust instance creation limit...\n");
-    for (int i = 0;;) {
-        VkInstance instance;
-        VkResult res = vkCreateInstance(&create_info, NULL, &instance);
-        switch (res) {
-        case VK_SUCCESS:
-            printf("  %d\n", ++i);
-            break;
-        default:
-            printf("Failed after %d instances: %s\n", i, to_str(res));
-            return 1;
-        }
-    }
-}
-
-static int test_device(void)
-{
-    VkInstanceCreateInfo create_info = {
+    static const VkInstanceCreateInfo create_info = {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-        .pApplicationInfo = &(VkApplicationInfo) {
-            .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-            .pApplicationName = "Vulkan Limits Test",
-            .applicationVersion = 1,
-            .engineVersion = 1,
-            .apiVersion = VK_API_VERSION_1_0,
-        },
+        .pApplicationInfo = &ainfo,
     };
 
     VkInstance instance;
     VkResult res = vkCreateInstance(&create_info, NULL, &instance);
     if (res != VK_SUCCESS) {
-        printf("Failed to create instance: %s\n", to_str(res));
-        return 1;
+        fprintf(stderr, "Failed to create Vulkan instance: %s\n", to_str(res));
+        exit(1);
     }
 
+    return instance;
+}
+
+static VkPhysicalDevice get_phys_device(VkInstance instance)
+{
     uint32_t count = 1;
-    VkPhysicalDevice physical_device;
-    vkEnumeratePhysicalDevices(instance, &count, &physical_device);
+    VkPhysicalDevice device;
+    vkEnumeratePhysicalDevices(instance, &count, &device);
 
     if (!count) {
-        printf("No physical devices found.\n");
-        vkDestroyInstance(instance, NULL);
-        return 1;
+        fprintf(stderr, "No physical devices found.\n");
+        exit(2);
     }
 
-    VkDeviceCreateInfo device_create_info = {
-        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        .queueCreateInfoCount = 1,
-        .pQueueCreateInfos = &(VkDeviceQueueCreateInfo) {
+    return device;
+}
+
+static VkDevice create_device(VkPhysicalDevice phys_device)
+{
+    static const float priorities[16] = {1.0f};
+    static const VkDeviceQueueCreateInfo qinfos[] = {
+        {
             .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+            .pQueuePriorities = priorities,
             .queueFamilyIndex = 0,
             .queueCount = 16,
-            .pQueuePriorities = (float[]){1.0f},
-        },
+        }
     };
+
+    static const VkDeviceCreateInfo device_info = {
+        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+        .queueCreateInfoCount = sizeof(qinfos) / sizeof(qinfos[0]),
+        .pQueueCreateInfos = qinfos,
+    };
+
+    VkDevice device;
+    VkResult res = vkCreateDevice(phys_device, &device_info, NULL, &device);
+    if (res != VK_SUCCESS) {
+        fprintf(stderr, "Failed to create device: %s\n", to_str(res));
+        exit(1);
+    }
+
+    return device;
+}
+
+static int test_instance(void)
+{
+    printf("Trying to exhaust instance creation limit...\n");
+    for (int num = 0;;) {
+        create_instance();
+        printf("  %d\n", ++num);
+    }
+}
+
+static int test_device(void)
+{
+    VkInstance instance = create_instance();
+    VkPhysicalDevice physical_device = get_phys_device(instance);
 
     printf("Trying to exhaust device creation limit...\n");
     for (int i = 0;;) {
-        VkDevice device;
-        VkResult res = vkCreateDevice(physical_device, &device_create_info, NULL, &device);
-        switch (res) {
-        case VK_SUCCESS:
-            printf("  %d\n", ++i);
-            break;
-        default:
-            printf("Failed after %d devices: %s\n", i, to_str(res));
-            return 1;
-        }
+        create_device(physical_device);
+        printf("  %d\n", ++i);
     }
 }
 
 static int test_both(void)
 {
-    VkInstanceCreateInfo create_info = {
-        .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-        .pApplicationInfo = &(VkApplicationInfo) {
-            .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-            .pApplicationName = "Vulkan Limits Test",
-            .applicationVersion = 1,
-            .engineVersion = 1,
-            .apiVersion = VK_API_VERSION_1_0,
-        },
-    };
-
-    VkDeviceCreateInfo device_create_info = {
-        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        .pQueueCreateInfos = &(VkDeviceQueueCreateInfo) {
-            .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-            .queueFamilyIndex = 0,
-            .queueCount = 1,
-            .pQueuePriorities = (float[]){1.0f},
-        },
-        .enabledExtensionCount = 0,
-    };
-
     printf("Trying to exhaust combined instance+device creation limit...\n");
     for (int i = 0;;) {
-        VkInstance instance;
-        VkResult res = vkCreateInstance(&create_info, NULL, &instance);
-        if (res != VK_SUCCESS) {
-            printf("Failed to create instance after %d iterations: %s\n", i, to_str(res));
-            return 1;
-        }
-
-        uint32_t count = 1;
-        VkPhysicalDevice physical_device;
-        vkEnumeratePhysicalDevices(instance, &count, &physical_device);
-        if (!count) {
-            printf("No physical devices found.\n");
-            return 1;
-        }
-
-        VkDevice device;
-        res = vkCreateDevice(physical_device, &device_create_info, NULL, &device);
-        switch (res) {
-        case VK_SUCCESS:
-            printf("  %d\n", ++i);
-            break;
-        default:
-            printf("Failed to create device after %d iterations: %s\n", i, to_str(res));
-            return 1;
-        }
+        VkInstance instance = create_instance();
+        VkPhysicalDevice physical_device = get_phys_device(instance);
+        create_device(physical_device);
+        printf("  %d\n", ++i);
     }
 }
 
