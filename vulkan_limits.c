@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <threads.h>
+#include <stdatomic.h>
+#include <unistd.h>
 
 #include <vulkan/vulkan.h>
 
@@ -129,6 +132,30 @@ static int test_both(void)
     }
 }
 
+static int device_thread(void *arg)
+{
+    atomic_int *num = arg;
+    create_device(get_phys_device(create_instance()));
+    printf("  %d\n", atomic_fetch_add(num, 1) + 1);
+
+    pause();
+    return 0;
+}
+
+static int test_threads(void)
+{
+    printf("Trying to exhaust threaded device creation limit...\n");
+    for (atomic_int num = 0;;) {
+        thrd_t thread;
+        if (thrd_create(&thread, device_thread, &num) != thrd_success) {
+            fprintf(stderr, "Failed to create thread.\n");
+            exit(2);
+        }
+
+        thrd_detach(thread);
+    }
+};
+
 int main(const int argc, const char *const argv[])
 {
     if (argc < 2) {
@@ -143,6 +170,8 @@ int main(const int argc, const char *const argv[])
         return test_device();
     } else if (!strcmp(test, "combined")) {
         return test_both();
+    } else if (!strcmp(test, "threads")) {
+        return test_threads();
     } else {
         fprintf(stderr, "Unknown test: %s\n", test);
         return 1;
