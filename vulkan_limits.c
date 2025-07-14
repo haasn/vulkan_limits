@@ -162,6 +162,31 @@ static int test_hold(void)
     return pause();
 }
 
+static int test_memory(void)
+{
+    VkDevice device = create_device(get_phys_device(create_instance()));
+
+    for (size_t size = 1; size; size <<= 1) {
+        VkDeviceMemory mem;
+        const VkMemoryAllocateInfo ainfo = {
+            .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+            .allocationSize  = size,
+            .memoryTypeIndex = 0,
+        };
+
+        printf("Trying to allocate %zu bytes of memory...", size);
+        VkResult res = vkAllocateMemory(device, &ainfo, NULL, &mem);
+        if (res == VK_SUCCESS) {
+            printf(" success\n");
+        } else {
+            printf(" failed: %s\n", to_str(res));
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
 int main(const int argc, const char *const argv[])
 {
     if (argc < 2) {
@@ -180,6 +205,8 @@ int main(const int argc, const char *const argv[])
         return test_threads();
     } else if (!strcmp(test, "hold")) {
         return test_hold();
+    } else if (!strcmp(test, "memory")) {
+        return test_memory();
     } else {
         fprintf(stderr, "Unknown test: %s\n", test);
         return 1;
